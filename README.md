@@ -1,16 +1,16 @@
 # fastapi sample
 
-Simple demonstration of Fastapi framework with [Exponea Testing HTTP server] (https://exponea-engineering-assignment.appspot.com/api/work) (ETS)
+Simple demonstration of Fastapi framework with Exponea Testing HTTP server on https://exponea-engineering-assignment.appspot.com/api/work
 - endpoint returns JSON response {'time': int}
 - endpoint can be inaccessible
 - ...it means a lot of fun
 
-Fastapi listens on /api/smart, ev. api/smart?timeout=int and whenever gets request, sends request to ETS (with some secret rules to follow) and processes response...mostly.
+Fastapi listens on */api/smart*, ev. *api/smart?timeout=int*. Whenever gets request, sends request to Testing server (with some secret rules to follow) and then processes response.
 
 Features and/or limitations:
-- when no timeout is defined, max timeout value is set to 600 ms
-- when incorrect timeout number is entered (timeout <= 0 or timeout > 600), max timeout value is set to 600 ms (no compromise, life is a hard game, folks)
-- when string value is used for timeout instead od number, JSON with error description is raised (cool Fastapi build-in message)
+- when no *timeout* is defined in query parameters, max timeout value for processing is set to 600 ms
+- when incorrect *timeout* number is entered (*timeout* <= 0 or *timeout* > 600), max timeout value for processing is set to 600 ms (no compromise, life is a hard game, folks)
+- when string value is used for *timeout* instead od number, JSON with error description is returned (cool Fastapi build-in message)
 - when timeout is reached during processing or error occurs, server returns {'time': 0}
 
 Used technologies
