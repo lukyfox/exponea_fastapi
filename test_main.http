@@ -19,3 +19,13 @@ GET http://127.0.0.1:8000/api/smart?timeout=10
 Accept: application/json
 
 ###
+
+GET http://127.0.0.1:8000/api/smart?timeout=-100
+Accept: application/json
+
+###
+
+GET http://127.0.0.1:8000/api/smart?timeout=NAN
+Accept: application/json
+
+###
