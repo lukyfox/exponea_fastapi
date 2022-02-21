@@ -92,7 +92,7 @@ async def ask_remote_server(timeout: int = MAX_TIMEOUT) -> dict:
     :param timeout: url query parameter specifying max timeout in ms for GET request
     :return: application/json
     """
-
+    timeout = timeout if 0 < timeout <= MAX_TIMEOUT else MAX_TIMEOUT
     async with httpx.AsyncClient() as async_client:
         response_list = await send_multiple_requests(async_client, request_count=1, timeout=timeout)
         if 0 < response_list[0].get_time() <= TIME_LIMIT:
