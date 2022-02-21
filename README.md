@@ -22,3 +22,9 @@ Used technologies
 
 Motivation:
 - I have never worked with Fastapi or async mindset and Sunday was a good time to make a change
+
+How to run:
+- must have: Docker & docker-compose
+- do: clone repo and go to folder where docker-compose.yml is located
+- run: docker-compose up -d
+- do: open your bowser and navigate to localhost:8080/api/smart
