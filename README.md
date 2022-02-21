@@ -28,3 +28,6 @@ How to run:
 - do: clone repo and go to folder where docker-compose.yml is located
 - run: docker-compose up -d
 - do: open your bowser and navigate to localhost:8080/api/smart
+
+
+...je to dokonalost sama? Tak to ani náhodou. Ale zábava to byla :)
