@@ -1,4 +1,5 @@
 # Test your FastAPI endpoints
+# - Expected return types (JSON)
 
 GET http://127.0.0.1:8000/api/smart
 Accept: application/json
@@ -29,3 +30,39 @@ GET http://127.0.0.1:8000/api/smart?timeout=NAN
 Accept: application/json
 
 ###
+
+### Expected response code 200 (warning - there's no 100% reliable testing endpoint, check may rarely fail)
+GET http://127.0.0.1:8000/api/smart?timeout=1000
+
+> {%
+client.test("Request executed successfully", function() {
+  client.assert(response.status === 200, "Response status is not 200");
+});
+%}
+
+### Expected response code 200 for low timeout (warning - there's no 100% reliable testing endpoint, check may rarely fail)
+GET http://127.0.0.1:8000/api/smart?timeout=1
+
+> {%
+client.test("Request executed successfully", function() {
+  client.assert(response.status === 200, "Response status is not 200");
+});
+%}
+
+### Expected value for time parameter in respone.body = 0 for low timeout, DEBUG = False!
+GET http://127.0.0.1:8000/api/smart?timeout=1
+
+> {%
+client.test("Request executed successfully", function() {
+  client.assert(response.body['time'] === 0, "Response body variable 'time' is not 0");
+});
+%}
+
+### Response.body always contains parameter time, DEBUG = False!
+GET http://127.0.0.1:8000/api/smart
+
+> {%
+client.test("Request executed successfully", function() {
+  client.assert(response.body.hasOwnProperty('time'), "Response body variable 'time' is not presented in response");
+});
+%}

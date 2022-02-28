@@ -1,15 +1,15 @@
 import asyncio
-import ast
 import httpx
 import logging
+import time
 
 from fastapi import FastAPI
 from typing import List
-from model.Response import Response
+from model.Response import Response, Counter
 
 DEBUG = False
 MAX_REQUESTS = 2
-TIME_LIMIT = 300
+FIRST_RESPONSE_TIME_LIMIT = 300
 MAX_TIMEOUT = 600
 URL_TO_TEST = 'https://exponea-engineering-assignment.appspot.com/api/work'
 
@@ -22,24 +22,40 @@ else:
 app = FastAPI()
 
 
+async def async_timer(limit: int) -> int:
+    """
+    Waiting for given limit of seconds, used as counter if first request responded in limit
+    :param limit: seconds to wait before return
+    :return: limit in seconds (float)
+    """
+    return await asyncio.sleep(limit, result=limit)
+
+
 async def send_request(
-        async_client: httpx.AsyncClient, url: str = URL_TO_TEST, timeout: int = MAX_TIMEOUT
+        async_client: httpx.AsyncClient, url: str = URL_TO_TEST, timeout: int = MAX_TIMEOUT, counter: Counter = None
 ) -> Response:
     """
     Function for sending single request to URL
     :param async_client: AsyncClient context manage
     :param url: url for sending requests
-    :param timeout: max portion of time in ms for remote service to respond
+    :param timeout: max portion of time in ms for remote service to respond, otherwise request failed
+    :param counter:
     :return: Response instance
     """
+    start = time.time()
     try:
         response = await async_client.get(url=url, timeout=timeout/1000.0)
         if response.status_code == 200:
+            end = int((time.time() - start)*1000)
+            if end > timeout:
+                raise httpx.ReadTimeout
             result = Response(
-                time=ast.literal_eval(response.content.decode())['time'],
+                time=end,
                 status=response.status_code,
                 message='OK'
             )
+            if counter:
+                counter.response_sent = end
             return result
         result = Response(
             time=0,
@@ -54,7 +70,7 @@ async def send_request(
         result = Response(
             time=0,
             status='error',
-            message=f'timeout error: {read_timeout.args}'
+            message=f'timeout error - {timeout} ms exceeded'
         )
         if DEBUG:
             logging.debug(result.as_dict())
@@ -72,18 +88,26 @@ async def send_request(
 
 
 async def send_multiple_requests(
-        async_client: httpx.AsyncClient, request_count: int, timeout: int = MAX_TIMEOUT
+        async_client: httpx.AsyncClient, request_count: int, timeout: int = MAX_TIMEOUT, counter: Counter = None
 ) -> List[Response]:
     """
     :param async_client: AsyncClient context manager
     :param request_count: number of asynchronous requests
     :param timeout: max portion of time in ms for remote service to respond
+    :param counter: Counter class instance to store time of first response
     :return: list of Response instances (size equals to request_count)
     """
-    request_list = [send_request(async_client, timeout=timeout) for _ in range(request_count)]
-    response_list = await asyncio.gather(*request_list)
-    return response_list
 
+    response_list_secondary = []
+    first_response = await send_request(async_client, timeout=timeout, counter=counter)
+    if counter.response_sent > await async_timer(FIRST_RESPONSE_TIME_LIMIT/1000.0):
+        request_list_secondary = [send_request(async_client, timeout=timeout) for _ in range(MAX_REQUESTS)]
+        response_list_secondary = await asyncio.gather(*request_list_secondary)
+
+    if response_list_secondary:
+        response_list_secondary.append(first_response)
+        return response_list_secondary
+    return [first_response]
 
 @app.get("/api/smart")
 async def ask_remote_server(timeout: int = MAX_TIMEOUT) -> dict:
@@ -92,22 +116,18 @@ async def ask_remote_server(timeout: int = MAX_TIMEOUT) -> dict:
     :param timeout: url query parameter specifying max timeout in ms for GET request
     :return: application/json
     """
-    timeout = timeout if 0 < timeout <= MAX_TIMEOUT else MAX_TIMEOUT
-    async with httpx.AsyncClient() as async_client:
-        response_list = await send_multiple_requests(async_client, request_count=1, timeout=timeout)
-        if 0 < response_list[0].get_time() <= TIME_LIMIT:
-            if DEBUG:
-                response_list[0].set_message('1st request successful')
-                logging.debug(response_list[0].as_dict())
-            return {'time': response_list[0].get_time()}
 
-        response_list.extend(await send_multiple_requests(async_client, MAX_REQUESTS, timeout))
+    timeout = timeout if 0 < timeout <= MAX_TIMEOUT else MAX_TIMEOUT
+    counter = Counter(timeout)
+    async with httpx.AsyncClient() as async_client:
+        response_list = await send_multiple_requests(async_client, request_count=1, timeout=timeout, counter=counter)
         valid_response_list = [r.as_dict() for r in response_list if r.get_time() > 0]
         if not valid_response_list:
             if DEBUG:
                 logging.debug(f'None of {MAX_REQUESTS+1} requests was successful')
-                logging.debug([r.as_dict() for r in response_list])
             return {'time': 0}
 
         valid_response_list = sorted(valid_response_list, key=lambda by: by['time'])
+        if DEBUG:
+            return [r.as_dict() for r in response_list]
         return {'time': valid_response_list[0]['time']}

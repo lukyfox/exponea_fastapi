@@ -1,4 +1,3 @@
-from typing import List
 import datetime
 
 
@@ -8,7 +7,7 @@ class Response:
             'time': time,
             'status': status,
             'message': message,
-            'created': datetime.datetime.now(),
+            'created': datetime.datetime.now()
         }
 
     def set_time(self, time: int):
@@ -31,3 +30,8 @@ class Response:
 
     def as_dict(self):
         return dict(self.response)
+
+
+class Counter:
+    def __init__(self, max_timeout: int):
+        self.response_sent = max_timeout
